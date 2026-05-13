@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>校舎ナビ</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Caveat&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:"Yu Mincho","Hiragino Mincho ProN","MS Mincho",serif;
+background:#f6efe7;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+/* メインカード */
+
+.container{
+background:#fffaf3;
+padding:35px;
+border-radius:16px;
+width:90%;
+max-width:420px;
+box-shadow:0 8px 25px rgba(0,0,0,0.08);
+text-align:center;
+}
+
+/* タイトル */
+
+.title{
+font-family:'Caveat', cursive;
+font-size:38px;
+margin-bottom:25px;
+color:#7a5c45;
+}
+
+/* 入力グループ */
+
+.input-group{
+margin-bottom:22px;
+text-align:left;
+}
+
+/* ラベル */
+
+label{
+font-size:15px;
+color:#6b4f3b;
+}
+
+/* 入力欄 */
+
+input{
+width:100%;
+margin-top:6px;
+padding:12px;
+border-radius:8px;
+border:1px solid #e8d8c6;
+font-size:16px;
+background:#fff;
+color:#5b4636;
+outline:none;
+font-family:"Yu Mincho","MS Mincho",serif;
+}
+
+input:focus{
+border-color:#d4bfa9;
+}
+
+/* ボタン */
+
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:10px;
+background:#e7c8b2;
+color:#5a4030;
+font-size:16px;
+font-family:"Yu Mincho","MS Mincho",serif;
+cursor:pointer;
+transition:0.2s;
+}
+
+button:hover{
+background:#ddb79c;
+}
+
+/* 結果表示 */
+
+#result{
+margin-top:25px;
+padding:15px;
+border-radius:10px;
+background:#fff;
+line-height:1.6;
+font-size:16px;
+color:#5b4636;
+border:1px solid #eee2d4;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1 class="title">𓆛saka-navi𓆝</h1>
+
+<div class="input-group">
+<label>現在の部屋</label>
+<input id="start" placeholder="0401">
+</div>
+
+<div class="input-group">
+<label>目的の部屋</label>
+<input id="end" placeholder="0203">
+</div>
+
+<button onclick="findRoute()">案内開始</button>
+
+<div id="result"></div>
+
+</div>
+
+<script>
+
+let pyodide;
+
+async function init(){
+pyodide = await loadPyodide();
+}
+
+init();
+
+async function findRoute(){
+
+let start = document.getElementById("start").value;
+let end = document.getElementById("end").value;
+
+let code = `
+graph = {
+
+"0401":["0402","階段1"],
+"0402":["0401","0403"],
+"0403":["0402","0404"],
+"0404":["0403","0405"],
+"0405":["0404","0406"],
+"0406":["0405","0407"],
+"0407":["0406","階段2"],
+
+"0301":["0302","階段3"],
+"0302":["0301","0303"],
+"0303":["0302","0304"],
+"0304":["0303","0305"],
+"0305":["0304","0306"],
+"0306":["0305","0307"],
+"0307":["0306","階段4"],
+
+"0201":["0202","階段5"],
+"0202":["0201","0203"],
+"0203":["0202","0204"],
+"0204":["0203","0205"],
+"0205":["0204","0206"],
+"0206":["0205","0207"],
+"0207":["0206","0208"],
+"0208":["0207","階段6"],
+
+"0101":["0102","階段7"],
+"0102":["0101","0103"],
+"0103":["0102","0104"],
+"0104":["0103","0105"],
+"0105":["0104","0106"],
+"0106":["0105","昇降口"],
+
+"階段1":["0401","階段3"],
+"階段2":["0407","階段4"],
+"階段3":["階段1","0301","階段5"],
+"階段4":["階段2","0307","階段6"],
+"階段5":["階段3","0201","階段7"],
+"階段6":["階段4","0208","階段8"],
+"階段7":["階段5","0101"],
+"階段8":["階段6","玄関"],
+
+"玄関":["階段8"],
+"昇降口":["0106"]
+
+}
+
+from collections import deque
+
+def find_route(start,end):
+
+    queue = deque([[start]])
+    visited = set()
+
+    while queue:
+
+        path = queue.popleft()
+        node = path[-1]
+
+        if node == end:
+            return path
+
+        if node not in visited:
+
+            visited.add(node)
+
+            for nxt in graph.get(node,[]):
+                new_path = list(path)
+                new_path.append(nxt)
+                queue.append(new_path)
+
+    return ["ルートなし"]
+
+result = find_route("${start}","${end}")
+" ↓ ".join(result)
+`;
+
+let result = await pyodide.runPythonAsync(code);
+
+document.getElementById("result").innerHTML = result;
+
+}
+
+</script>
+
+</body>
+</html>
